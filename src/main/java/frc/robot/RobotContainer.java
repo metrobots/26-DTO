@@ -7,7 +7,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.subsystems.dashboard.Dashboard;
 import frc.robot.subsystems.drivetrain.Drivetrain;
 import frc.robot.utils.Constants;
 import frc.robot.utils.Constants.OIConstants;
@@ -23,8 +22,6 @@ public class RobotContainer {
   private final SendableChooser<Command> autoChooser;
   // Subsystem declarations
   final Drivetrain m_drivetrain;
-  final Dashboard m_dashboard;
-
   
   // The driver's controller
   private final CommandXboxController primary = Constants.primary;
@@ -32,7 +29,6 @@ public class RobotContainer {
    public RobotContainer() {
 
     m_drivetrain = new Drivetrain();
-    m_dashboard = new Dashboard();
     
     
     registerNamedCommands();
@@ -42,12 +38,12 @@ public class RobotContainer {
     // Configure the button bindings
     configureButtonBindings();
 
-    m_drivetrain.setDefaultCommand( // IF THE DRIVETRAIN ISN'T DOING ANYTHING ELSE, DO THIS. MULTIPLY THE SPEED BY THE ROBOT SPEED VALUE FROM DASHBOARD
+    m_drivetrain.setDefaultCommand( // IF THE DRIVETRAIN ISN'T DOING ANYTHING ELSE, DO THIS. 
         new RunCommand(() -> {
             m_drivetrain.drive(
-                (-MathUtil.applyDeadband(primary.getLeftY(), OIConstants.kDriveDeadband))*(m_dashboard.getRobotSpeed()),
-                (-MathUtil.applyDeadband(primary.getLeftX(), OIConstants.kDriveDeadband))*(m_dashboard.getRobotSpeed()),
-                (MathUtil.applyDeadband(primary.getRightX(), OIConstants.kDriveDeadband))*(m_dashboard.getRobotSpeed()),
+                (-MathUtil.applyDeadband(primary.getLeftY(), OIConstants.kDriveDeadband)),
+                (-MathUtil.applyDeadband(primary.getLeftX(), OIConstants.kDriveDeadband)),
+                (MathUtil.applyDeadband(primary.getRightX(), OIConstants.kDriveDeadband)),
                 true);
         }, m_drivetrain)
     );

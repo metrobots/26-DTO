@@ -57,7 +57,6 @@ public final class Constants {
     public static final double kFrontRightEncoderOffset = 2.766007945129726;
     public static final double kRearLeftEncoderOffset = 4.765345577948231;
     public static final double kRearRightEncoderOffset = 2.616756710656141;
-
   }
 
   public static final class ModuleConstants {

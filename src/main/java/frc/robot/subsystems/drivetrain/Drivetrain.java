@@ -9,6 +9,7 @@ import com.studica.frc.AHRS.NavXComType;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -21,6 +22,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.utils.Constants;
+import frc.robot.utils.Constants.AutoConstants;
 import frc.robot.utils.Constants.DriveConstants;
 
 public class Drivetrain extends SubsystemBase {
@@ -60,6 +62,11 @@ public class Drivetrain extends SubsystemBase {
   private PIDController headingCorrector = new PIDController(0, 0, 0);
 
   private static Field2d field = Constants.AutoConstants.field2d;
+
+  // Ban people from going directly forward to backward immediately
+  private final SlewRateLimiter xSpeedLimiter = new SlewRateLimiter(AutoConstants.kMaxAccelerationMetersPerSecondSquared);
+  private final SlewRateLimiter ySpeedLimiter = new SlewRateLimiter(AutoConstants.kMaxAccelerationMetersPerSecondSquared);
+  private final SlewRateLimiter rotLimiter = new SlewRateLimiter(AutoConstants.kMaxAngularSpeedRadiansPerSecondSquared);
 
   // Odometry for tracking pose
   SwerveDriveOdometry m_odometry = new SwerveDriveOdometry(
@@ -285,12 +292,17 @@ public class Drivetrain extends SubsystemBase {
    *                      field.
    */
   public void drive(double xSpeed, double ySpeed, double rot, boolean fieldRelative) {
-    // Convert commanded speeds into correct for drivetrain
-    double xSpeedDelivered = xSpeed * DriveConstants.kMaxSpeedMetersPerSecond;
-    double ySpeedDelivered = ySpeed * DriveConstants.kMaxSpeedMetersPerSecond;
-    double rotDelivered = rot * DriveConstants.kMaxAngularSpeed;
+    // Apply rate limiting
+    double xSpeedLimited = xSpeedLimiter.calculate(xSpeed);
+    double ySpeedLimited = ySpeedLimiter.calculate(ySpeed);
+    double rotLimited = rotLimiter.calculate(rot);
 
-    // Create ChassisSpeeds object with correct coordinate system
+    // Convert to drivetrain speeds
+    double xSpeedDelivered = xSpeedLimited * DriveConstants.kMaxSpeedMetersPerSecond;
+    double ySpeedDelivered = ySpeedLimited * DriveConstants.kMaxSpeedMetersPerSecond;
+    double rotDelivered = rotLimited * DriveConstants.kMaxAngularSpeed;
+
+    // Convert to chassis speeds
     var chassisSpeeds = fieldRelative
         ? ChassisSpeeds.fromFieldRelativeSpeeds(
             xSpeedDelivered,
@@ -299,20 +311,17 @@ public class Drivetrain extends SubsystemBase {
             Rotation2d.fromDegrees(-m_gyro.getAngle()))
         : new ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered);
 
-    // Change it to module states
+    // Convert to swerve module states
     var swerveModuleStates = DriveConstants.kDriveKinematics.toSwerveModuleStates(chassisSpeeds);
+    SwerveDriveKinematics.desaturateWheelSpeeds(swerveModuleStates, DriveConstants.kMaxSpeedMetersPerSecond);
 
-    // Desaturate wheel speeds
-    SwerveDriveKinematics.desaturateWheelSpeeds(
-        swerveModuleStates,
-        DriveConstants.kMaxSpeedMetersPerSecond);
-
-    // Set states for each module
+    // Apply to modules
     m_frontLeft.setDesiredState(swerveModuleStates[0]);
     m_frontRight.setDesiredState(swerveModuleStates[1]);
     m_rearLeft.setDesiredState(swerveModuleStates[2]);
     m_rearRight.setDesiredState(swerveModuleStates[3]);
-  }
+}
+
 
   /**
    * Sets the swerve ModuleStates.

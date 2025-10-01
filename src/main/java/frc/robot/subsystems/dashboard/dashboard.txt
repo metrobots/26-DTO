@@ -1,0 +1,42 @@
+// OPEN THIS IN A WEB BROWSER. TEST OF A DASHBOARD TO REPLACE SMART DASHBOARD FOR FINALIZED DASHBOARDS. NOT FOR DEBUGGING
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>team 3324 dashboard</title>
+</head>
+<body>
+    <h1>3324 dashboard - test</h1>
+
+    <label for="robotSpeed">Robot Speed: </label>
+    <input type="number" id="robotSpeed" step="0.1" min="0" max="1" value="0.5">
+
+    <script type="module">
+        import { NT4_Client } from "https://unpkg.com/ntcore-ts-client@latest/dist/nt4.mjs";
+
+        // Connect to the robot's NT4 server
+        const client = new NT4_Client("ws://10.33.24.2:5810", "WebDashboard");
+
+        // Grab reference to the input field
+        const speedInput = document.getElementById("robotSpeed");
+
+        // Subscribe to updates from the robot
+        client.addTopic("/Dashboard/robotSpeed", "double", (value) => {
+            // Update input value when the robot updates the dashboard
+            speedInput.value = value;
+        });
+
+        // Start the NT4 connection
+        client.start();
+
+        // Automatically publish value whenever it changes in the input box
+        speedInput.addEventListener("input", () => {
+            const val = parseFloat(speedInput.value);
+            if (!isNaN(val)) {
+                client.publishValue("/Dashboard/robotSpeed", val);
+            }
+        });
+    </script>
+</body>
+</html>
